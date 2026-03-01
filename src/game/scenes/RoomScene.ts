@@ -426,7 +426,7 @@ export class RoomScene extends Phaser.Scene {
 
   // ══════════════════════════════════════════════════════════════════════════
   //  INPUT
-  // ══════════════════════════════════════════════════════════════════════════
+  // ══���═══════════════════════════════════════════════════════════════════════
 
   private setupInput() {
     this.cursors = this.input.keyboard!.createCursorKeys();
@@ -548,8 +548,11 @@ export class RoomScene extends Phaser.Scene {
     this.nearbyObject = closest;
     this.hintBadge.setVisible(closest !== null);
     if (closest) {
-      // position badge above player head
-      this.hintBadge.setPosition(this.player.x, this.player.y - 38);
+      // convert player world position to screen/camera space for the fixed badge
+      const cam = this.cameras.main;
+      const screenX = (this.player.x - cam.scrollX) * cam.zoom;
+      const screenY = (this.player.y - cam.scrollY) * cam.zoom - 38;
+      this.hintBadge.setPosition(screenX, screenY);
     }
   }
 
@@ -575,7 +578,7 @@ export class RoomScene extends Phaser.Scene {
   // ══════════════════════════════════════════════════════════════════════════
 
   private createHintBadge() {
-    this.hintBadge = this.add.container(0, 0).setDepth(20).setVisible(false);
+    this.hintBadge = this.add.container(0, 0).setDepth(20).setVisible(false).setScrollFactor(0);
 
     const bg = this.add.graphics();
     bg.fillStyle(C.hint);
@@ -601,7 +604,7 @@ export class RoomScene extends Phaser.Scene {
     const boxH = 80;
     const pad  = 12;
 
-    this.dialogBox = this.add.container(0, H - boxH - 8).setDepth(30).setVisible(false);
+    this.dialogBox = this.add.container(0, H - boxH - 8).setDepth(30).setVisible(false).setScrollFactor(0);
 
     // background
     const bg = this.add.graphics();
@@ -633,8 +636,6 @@ export class RoomScene extends Phaser.Scene {
     this.dialogOpen = true;
     this.dialogText.setText(message);
     this.dialogBox.setVisible(true);
-    // pin dialog to camera view
-    this.dialogBox.setScrollFactor(0);
     this.hintBadge.setVisible(false);
   }
 
