@@ -1,0 +1,45 @@
+/* App.css – minimal shell styles for the portfolio game demo */
+:root {
+  font-family: 'Courier New', monospace;
+  background: #1a1a2e;
+  color: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1a1a2e;
+}
+
+.app-root {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.controls-hint {
+  font-size: 12px;
+  color: #aaa;
+  letter-spacing: 0.03em;
+}
+
+kbd {
+  display: inline-block;
+  padding: 1px 5px;
+  border: 1px solid #555;
+  border-radius: 3px;
+  font-family: inherit;
+  font-size: 11px;
+  background: #2a2a3e;
+  color: #f0c040;
+}
+
