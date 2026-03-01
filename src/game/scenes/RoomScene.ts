@@ -73,6 +73,9 @@ export class RoomScene extends Phaser.Scene {
   private playerDir: 'up' | 'down' | 'left' | 'right' = 'down';
   private isMoving = false;
   private stepTick = 0;
+  // Cache player frames to avoid recreating graphics every tick
+  private playerFrames: Map<string, Phaser.GameObjects.Graphics> = new Map();
+  private currentFrameKey = '';
 
   // controls
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -353,58 +356,71 @@ export class RoomScene extends Phaser.Scene {
   }
 
   /**
-   * Redraws the player sprite inside the container.
+   * Switches to a cached player frame (creating it if needed).
    * @param dir   Direction the character is facing.
    * @param step  Alternate leg position for walk cycle.
    */
   private drawPlayerFrame(dir: 'up' | 'down' | 'left' | 'right', step: boolean) {
-    this.player.removeAll(true);
+    const frameKey = `${dir}_${step}`;
+    
+    // Skip if already showing this frame
+    if (frameKey === this.currentFrameKey) return;
+    
+    // Hide current frame
+    if (this.currentFrameKey && this.playerFrames.has(this.currentFrameKey)) {
+      this.playerFrames.get(this.currentFrameKey)!.setVisible(false);
+    }
+    
+    // Get or create the frame
+    if (!this.playerFrames.has(frameKey)) {
+      const g = this.createPlayerGraphics(dir, step);
+      this.playerFrames.set(frameKey, g);
+      this.player.add(g);
+    }
+    
+    // Show the new frame
+    this.playerFrames.get(frameKey)!.setVisible(true);
+    this.currentFrameKey = frameKey;
+  }
 
+  /**
+   * Creates a graphics object for a specific player frame.
+   */
+  private createPlayerGraphics(dir: 'up' | 'down' | 'left' | 'right', step: boolean): Phaser.GameObjects.Graphics {
     const g = this.add.graphics();
-    const S = 1; // scale factor (1 = 1:1 with tile grid)
-
-    // shared measurements
+    const S = 1;
     const cx = 0;
     const headY = -22 * S;
     const bodyY = -12 * S;
     const legY  = 0 * S;
 
     if (dir === 'down' || dir === 'left' || dir === 'right') {
-      // shoes
       g.fillStyle(C.playerShoes);
       const lx = step ? -4 : -2;
       const rx = step ? 0 : 2;
       g.fillRect(cx + lx - 4, legY + 8 * S, 7 * S, 4 * S);
       g.fillRect(cx + rx + 1, legY + 8 * S, 7 * S, 4 * S);
-      // pants
       g.fillStyle(C.playerPants);
       g.fillRect(cx - 5, legY, 5 * S, 10 * S);
       g.fillRect(cx + 1, legY, 5 * S, 10 * S);
-      // shirt
       g.fillStyle(C.playerShirt);
       g.fillRect(cx - 6, bodyY, 12 * S, 14 * S);
-      // arms
       const armOffset = step ? 2 : -2;
       g.fillRect(cx - 9, bodyY + armOffset, 3 * S, 10 * S);
       g.fillRect(cx + 6, bodyY - armOffset, 3 * S, 10 * S);
-      // head
       g.fillStyle(C.playerBody);
       g.fillRect(cx - 6, headY, 12 * S, 12 * S);
-      // hair
       g.fillStyle(C.playerHair);
       g.fillRect(cx - 6, headY, 12 * S, 5 * S);
       if (dir !== 'down') {
-        // side hair tuft
         g.fillRect(cx + (dir === 'right' ? 6 : -8), headY + 2, 3, 6);
       }
-      // eyes (only when facing down/left/right)
       if (dir === 'down') {
         g.fillStyle(0x000000);
         g.fillRect(cx - 3, headY + 7, 2, 2);
         g.fillRect(cx + 2, headY + 7, 2, 2);
       }
     } else {
-      // facing up – show back of head
       g.fillStyle(C.playerPants);
       g.fillRect(cx - 5, legY, 5 * S, 10 * S);
       g.fillRect(cx + 1, legY, 5 * S, 10 * S);
@@ -421,12 +437,12 @@ export class RoomScene extends Phaser.Scene {
       g.fillRect(cx - 6, headY, 12 * S, 12 * S);
     }
 
-    this.player.add(g);
+    return g;
   }
 
   // ══════════════════════════════════════════════════════════════════════════
   //  INPUT
-  // ══���═══════════════════════════════════════════════════════════════════════
+  // ══�����═══════════════════════════════════════════════════════════════════════
 
   private setupInput() {
     this.cursors = this.input.keyboard!.createCursorKeys();
@@ -548,11 +564,8 @@ export class RoomScene extends Phaser.Scene {
     this.nearbyObject = closest;
     this.hintBadge.setVisible(closest !== null);
     if (closest) {
-      // convert player world position to screen/camera space for the fixed badge
-      const cam = this.cameras.main;
-      const screenX = (this.player.x - cam.scrollX) * cam.zoom;
-      const screenY = (this.player.y - cam.scrollY) * cam.zoom - 38;
-      this.hintBadge.setPosition(screenX, screenY);
+      // Position badge above player head in world coords (scrollFactor handles camera)
+      this.hintBadge.setPosition(this.player.x, this.player.y - 38);
     }
   }
 
@@ -578,7 +591,8 @@ export class RoomScene extends Phaser.Scene {
   // ══════════════════════════════════════════════════════════════════════════
 
   private createHintBadge() {
-    this.hintBadge = this.add.container(0, 0).setDepth(20).setVisible(false).setScrollFactor(0);
+    // Use default scrollFactor(1) so badge moves with world and stays above player
+    this.hintBadge = this.add.container(0, 0).setDepth(20).setVisible(false);
 
     const bg = this.add.graphics();
     bg.fillStyle(C.hint);
